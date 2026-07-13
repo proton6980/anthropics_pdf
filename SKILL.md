@@ -4,9 +4,11 @@ description: Use this skill whenever the user wants to do anything with PDF file
 license: Proprietary. LICENSE.txt has complete terms
 ---
 
-> **Sandbox 环境说明 (sayu)**：本 skill 跑在离线 Python 沙箱。**可用（无需装包）**：`pypdf`/`pdfplumber`/`pdf2image`/`Pillow`/`reportlab`（Python 库）+ `qpdf`/`pdftoppm`(poppler)（系统命令）。覆盖读取/提取/合并/拆分/旋转/加解密/建 PDF/填表单/转图片。
+> **Sandbox 环境说明 (sayu)**：本 skill 跑在 Python 沙箱。**base 自带（免装）**：`pypdf`/`pdfplumber`/`pdf2image`/`Pillow`/`reportlab`（Python 库）+ `qpdf`/`pdftoppm`(poppler)（系统命令）。覆盖读取/提取/合并/拆分/旋转/加解密/建 PDF/填表单/转图片。
 >
-> **不可用**：① **OCR**（`pytesseract`+`tesseract` 均未装、沙箱离线不能 `pip install`）→ 扫描件 OCR 跑不了；② `pdftk` 未装 → 合并/拆分/旋转/加解密**改用 `qpdf`**（SKILL.md 已给 qpdf 等价命令）。
+> **OCR（扫描件 → 文本）**：用 **`rapidocr-onnxruntime`**（已在 `requirements.txt`，沙箱首次 `pip --user` 装，模型 `.onnx` 打包在 wheel 内、离线可加载）。**不要用 `pytesseract`/`tesseract`**——沙箱无 tesseract 系统二进制。用法见下方「Extract Text from Scanned PDFs」。
+>
+> **不可用**：`pdftk` 未装 → 合并/拆分/旋转/加解密**改用 `qpdf`**（SKILL.md 已给 qpdf 等价命令）。
 
 # PDF Processing Guide
 
@@ -236,22 +238,25 @@ pdftk input.pdf rotate 1east output rotated.pdf
 
 ### Extract Text from Scanned PDFs
 ```python
-# Requires: pip install pytesseract pdf2image
-import pytesseract
+# Sandbox: rapidocr-onnxruntime (在 requirements.txt) + pdf2image。不要用 pytesseract。
+import numpy as np
 from pdf2image import convert_from_path
+from rapidocr_onnxruntime import RapidOCR
 
-# Convert PDF to images
-images = convert_from_path('scanned.pdf')
+engine = RapidOCR()                       # 首次实例化加载内置 onnx 模型 (离线)
+images = convert_from_path('scanned.pdf', dpi=200)  # dpi 高些识别更准
 
-# OCR each page
 text = ""
 for i, image in enumerate(images):
+    result, _ = engine(np.asarray(image))  # result: [[box, text, score], ...] 或 None
     text += f"Page {i+1}:\n"
-    text += pytesseract.image_to_string(image)
+    if result:
+        text += "\n".join(line[1] for line in result)
     text += "\n\n"
 
 print(text)
 ```
+> 中文/多语言默认支持（rapidocr 内置中英模型）。若只识别英文，结果一样可用，无需切模型。
 
 ### Add Watermark
 ```python
@@ -307,7 +312,7 @@ with open("encrypted.pdf", "wb") as output:
 | Extract tables | pdfplumber | `page.extract_tables()` |
 | Create PDFs | reportlab | Canvas or Platypus |
 | Command line merge | qpdf | `qpdf --empty --pages ...` |
-| OCR scanned PDFs | pytesseract | Convert to image first |
+| OCR scanned PDFs | rapidocr-onnxruntime | Convert to image first (非 pytesseract) |
 | Fill PDF forms | pdf-lib or pypdf (see FORMS.md) | See FORMS.md |
 
 ## Next Steps

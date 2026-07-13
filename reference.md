@@ -588,15 +588,18 @@ qpdf --replace-input corrupted.pdf
 
 ### Text Extraction Issues
 ```python
-# Fallback to OCR for scanned PDFs
-import pytesseract
+# Fallback to OCR for scanned PDFs (sandbox: rapidocr, 非 pytesseract)
+import numpy as np
 from pdf2image import convert_from_path
+from rapidocr_onnxruntime import RapidOCR
 
 def extract_text_with_ocr(pdf_path):
-    images = convert_from_path(pdf_path)
+    engine = RapidOCR()
     text = ""
-    for i, image in enumerate(images):
-        text += pytesseract.image_to_string(image)
+    for image in convert_from_path(pdf_path, dpi=200):
+        result, _ = engine(np.asarray(image))
+        if result:
+            text += "\n".join(line[1] for line in result) + "\n"
     return text
 ```
 

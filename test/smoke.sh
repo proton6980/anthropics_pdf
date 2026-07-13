@@ -1,6 +1,6 @@
 #!/bin/sh
 # 功能级 smoke: 沙箱 base image 里真跑 pdf 全工具链。
-# OCR(pytesseract/tesseract)、pdftk 沙箱无, 不测。由 scripts/smoke.sh 在容器内执行。
+# OCR 用 rapidocr(requirements.txt 装); pdftk 沙箱无, 不测。由 scripts/smoke.sh 在容器内执行。
 set -e
 
 echo "-- reportlab 造 PDF"
@@ -50,4 +50,23 @@ assert len(PdfReader("/tmp/smoke_merged.pdf").pages) == 4
 print("  merged pages: 4")
 PY
 
-echo "功能 smoke 通过: reportlab/pypdf/pdfplumber/pdf2image + qpdf 全链可用 (OCR/pdftk 沙箱不测)"
+echo "-- rapidocr OCR 扫描件 (渲染大字 PDF -> 转图 -> 识别)"
+python - <<'PY'
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+c = canvas.Canvas("/tmp/scan.pdf", pagesize=letter)
+c.setFont("Helvetica-Bold", 48)          # 大字, 靠 OCR 认
+c.drawString(80, 600, "INVOICE 2026")
+c.save()
+
+import numpy as np
+from pdf2image import convert_from_path
+from rapidocr_onnxruntime import RapidOCR
+img = convert_from_path("/tmp/scan.pdf", dpi=200)[0]
+result, _ = RapidOCR()(np.asarray(img))
+txt = " ".join(l[1] for l in (result or [])).upper()
+assert "INVOICE" in txt and "2026" in txt, repr(txt)
+print("  OCR 识别:", txt)
+PY
+
+echo "功能 smoke 通过: reportlab/pypdf/pdfplumber/pdf2image/rapidocr + qpdf 全链可用 (pdftk 沙箱不测)"
