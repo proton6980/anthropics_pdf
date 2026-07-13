@@ -1,0 +1,15 @@
+{
+  "slug": "anthropics_pdf",
+  "kind": "skill",
+  "name": "pdf",
+  "description": "读取/提取/合并/拆分/旋转/加解密 PDF，创建 PDF，填写 PDF 表单，转图片：pypdf/pdfplumber/pdf2image/reportlab + qpdf。沙箱离线运行；OCR(pytesseract/tesseract)与 pdftk 不可用(合并等改用 qpdf)。",
+  "version": "v1",
+  "runtime_type": "python",
+  "entry_main": "SKILL.md",
+  "input_schema": { "type": "object", "properties": {} },
+  "dependencies": [],
+  "network_policy": "none",
+  "timeout_sec": 120,
+  "memory_mb": 1024,
+  "cpu_quota": 1.0
+}
