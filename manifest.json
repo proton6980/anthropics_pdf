@@ -9,7 +9,7 @@
   "input_schema": { "type": "object", "properties": {} },
   "dependencies": [],
   "network_policy": "open",
-  "timeout_sec": 180,
-  "memory_mb": 2048,
+  "timeout_sec": 60,
+  "memory_mb": 512,
   "cpu_quota": 1.0
 }
